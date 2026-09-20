@@ -14,14 +14,14 @@ class Base(DeclarativeBase):
 # ==========================================
 
 class TipoAvaliacaoEnum(enum.Enum):
-    P1 = "P1"
-    P2 = "P2"
     SEMINARIO = "Seminário"
     RELATORIO_LAB = "Relatório de Laboratório"
     OSCE = "OSCE"
     PROVA_PRATICA = "Prova Prática"
+    PROVA_TEORICA = "Prova Teórica"
     ESTUDO_CASO = "Estudo de Caso"
     TRABALHO_ARTIGO = "Trabalho / Artigo"
+    OUTRO = "Outro"
 
 class StatusAvaliacaoEnum(enum.Enum):
     EM_ANDAMENTO = "Em Andamento"

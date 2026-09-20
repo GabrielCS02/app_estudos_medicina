@@ -1,9 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from datetime import date
 from sqlalchemy import func
+from datetime import date
 
-# Importações da nossa arquitetura
 from app.core.database import get_db
 from app.models.schema_db import (
     Materia, 
@@ -15,7 +14,6 @@ from app.models.schema_db import (
     DificuldadeCorEnum
 )
 from app.services.motor_calculos import (
-    calcular_percentual_acertos,
     agendar_revisoes,
     classificar_dificuldade_cor
 )
@@ -23,12 +21,12 @@ from app.services.motor_calculos import (
 router = APIRouter(tags=["Estudos e Estrutura"])
 
 # ==========================================
-# ROTAS DE HIERARQUIA E CADASTRO
+# ROTAS DE HIERARQUIA (Matérias, Tópicos e Subtópicos)
 # ==========================================
 
 @router.post("/materias/")
 def criar_materia(nome: str, db: Session = Depends(get_db)):
-    """Cria uma nova matéria garantindo que não haja duplicatas por erro de digitação."""
+    """Cria uma nova matéria com proteção contra duplicatas e variações de maiúsculas/minúsculas."""
     nome_limpo = nome.strip()
     
     materia_existente = db.query(Materia).filter(
@@ -42,22 +40,20 @@ def criar_materia(nome: str, db: Session = Depends(get_db)):
     db.add(nova_materia)
     db.commit()
     db.refresh(nova_materia)
-    
     return {"status": "sucesso", "materia_id": nova_materia.id, "nome": nova_materia.nome}
+
 
 @router.get("/materias/")
 def listar_materias(db: Session = Depends(get_db)):
-    """Retorna a lista real de matérias cadastradas no banco."""
+    """Retorna a lista de todas as matérias cadastradas."""
     materias = db.query(Materia).all()
     return [{"id": m.id, "nome": m.nome} for m in materias]
 
+
 @router.get("/materias/{materia_id}/detalhes")
 def obter_detalhes_materia(materia_id: int, db: Session = Depends(get_db)):
-    """
-    Busca a hierarquia completa: Matéria -> Tópicos -> Subtópicos -> Aula -> Revisões.
-    """
+    """Busca a estrutura completa da matéria: tópicos, subtópicos, aula e revisões vinculadas."""
     materia = db.query(Materia).filter(Materia.id == materia_id).first()
-    
     if not materia:
         raise HTTPException(status_code=404, detail="Matéria não encontrada")
         
@@ -96,6 +92,7 @@ def obter_detalhes_materia(materia_id: int, db: Session = Depends(get_db)):
                 "id": s.id,
                 "nome": s.nome,
                 "estudo_base": s.estudo_base,
+                "dificuldade_grau": s.dificuldade_grau,
                 "dificuldade_cor": s.dificuldade_cor.value,
                 "aproveitamento": s.questoes_percentual,
                 "aula": aula_data
@@ -104,18 +101,20 @@ def obter_detalhes_materia(materia_id: int, db: Session = Depends(get_db)):
         
     return resultado
 
+
 @router.post("/materias/{materia_id}/topicos/")
 def criar_topico(materia_id: int, nome: str, estudo_base: bool = False, db: Session = Depends(get_db)):
-    """Cria um novo tópico atrelado a uma matéria."""
+    """Cadastra um novo tópico vinculado a uma matéria."""
     novo_topico = Topico(materia_id=materia_id, nome=nome, estudo_base=estudo_base)
     db.add(novo_topico)
     db.commit()
     db.refresh(novo_topico)
     return {"status": "sucesso", "topico_id": novo_topico.id, "nome": novo_topico.nome}
 
+
 @router.post("/topicos/{topico_id}/subtopicos/")
 def criar_subtopico(topico_id: int, nome: str, dificuldade: int, db: Session = Depends(get_db)):
-    """Cria um novo subtópico e já converte a dificuldade (0-10) em Cor[cite: 4]."""
+    """Cadastra um subtópico, validando o grau (0 a 10) e atribuindo a cor correspondente."""
     if not (0 <= dificuldade <= 10):
         raise HTTPException(status_code=400, detail="A dificuldade deve estar entre 0 e 10.")
     
@@ -140,54 +139,52 @@ def criar_subtopico(topico_id: int, nome: str, dificuldade: int, db: Session = D
         "classificacao_cor": cor_str
     }
 
+# ==========================================
+# ROTA DE CONTROLE DO ESTUDO BASE E REVISÕES
+# ==========================================
+
 @router.patch("/subtopicos/{subtopico_id}/toggle-estudo-base")
 def toggle_estudo_base(subtopico_id: int, db: Session = Depends(get_db)):
-    """Alterna o status do Estudo Base de um subtópico específico."""
+    """
+    Alterna o status do Estudo Base:
+    - Ao marcar SIM: cria aula na data de hoje e gera as revisões de 1, 7 e 30 dias.
+    - Ao desmarcar para NÃO: remove a aula e exclui todas as revisões vinculadas em cascata.
+    """
     subtopico = db.query(Subtopico).filter(Subtopico.id == subtopico_id).first()
     if not subtopico:
         raise HTTPException(status_code=404, detail="Subtópico não encontrado")
     
     subtopico.estudo_base = not subtopico.estudo_base
+    
+    if subtopico.estudo_base:
+        hoje = date.today()
+        ultima_aula = db.query(Aula).filter(Aula.subtopico_id == subtopico_id).first()
+        
+        if not ultima_aula:
+            ultima_aula = Aula(subtopico_id=subtopico_id, data_aula=hoje)
+            db.add(ultima_aula)
+            db.flush()
+            
+            revisoes = agendar_revisoes(hoje)
+            rev1 = Revisao(aula_id=ultima_aula.id, numero_revisao=1, data_agendada=revisoes["rev_1"], status=StatusRevisaoEnum.PENDENTE)
+            rev2 = Revisao(aula_id=ultima_aula.id, numero_revisao=2, data_agendada=revisoes["rev_2"], status=StatusRevisaoEnum.PENDENTE)
+            rev3 = Revisao(aula_id=ultima_aula.id, numero_revisao=3, data_agendada=revisoes["rev_3"], status=StatusRevisaoEnum.PENDENTE)
+            db.add_all([rev1, rev2, rev3])
+        else:
+            ultima_aula.data_aula = hoje
+            revisoes = agendar_revisoes(hoje)
+            for r in ultima_aula.revisoes:
+                if r.numero_revisao == 1:
+                    r.data_agendada = revisoes["rev_1"]
+                elif r.numero_revisao == 2:
+                    r.data_agendada = revisoes["rev_2"]
+                elif r.numero_revisao == 3:
+                    r.data_agendada = revisoes["rev_3"]
+    else:
+        aulas = db.query(Aula).filter(Aula.subtopico_id == subtopico_id).all()
+        for aula in aulas:
+            db.delete(aula)
+
     db.commit()
     db.refresh(subtopico)
     return {"status": "sucesso", "estudo_base": subtopico.estudo_base}
-
-@router.get("/subtopicos/")
-def listar_subtopicos(db: Session = Depends(get_db)):
-    """Retorna todos os subtópicos reais do banco para alimentar o autocomplete."""
-    subtopicos = db.query(Subtopico).all()
-    return [{"id": s.id, "nome": f"{s.nome} ({s.topico.materia.nome if s.topico and s.topico.materia else 'Sem Matéria'})"} for s in subtopicos]
-
-# ==========================================
-# ROTAS DE AULAS E REVISÕES
-# ==========================================
-
-@router.post("/subtopicos/{subtopico_id}/registrar-aula")
-def registrar_aula(subtopico_id: int, data_aula: date, acertos: int, db: Session = Depends(get_db)):
-    """Recebe o input de uma aula, calcula percentuais, atualiza o subtópico e agenda as 3 revisões[cite: 4]."""
-    subtopico = db.query(Subtopico).filter(Subtopico.id == subtopico_id).first()
-    if not subtopico:
-         raise HTTPException(status_code=404, detail="Subtópico não encontrado")
-
-    revisoes = agendar_revisoes(data_aula)
-    percentual = calcular_percentual_acertos(acertos)
-    
-    subtopico.questoes_acertos = acertos
-    subtopico.questoes_percentual = percentual
-    
-    nova_aula = Aula(subtopico_id=subtopico_id, data_aula=data_aula)
-    db.add(nova_aula)
-    db.flush()
-    
-    rev1 = Revisao(aula_id=nova_aula.id, numero_revisao=1, data_agendada=revisoes["rev_1"], status=StatusRevisaoEnum.PENDENTE)
-    rev2 = Revisao(aula_id=nova_aula.id, numero_revisao=2, data_agendada=revisoes["rev_2"], status=StatusRevisaoEnum.PENDENTE)
-    rev3 = Revisao(aula_id=nova_aula.id, numero_revisao=3, data_agendada=revisoes["rev_3"], status=StatusRevisaoEnum.PENDENTE)
-    
-    db.add_all([rev1, rev2, rev3])
-    db.commit()
-    
-    return {
-        "status": "Aula e revisões gravadas com sucesso no banco de dados.",
-        "datas_revisao": revisoes,
-        "desempenho_questoes": {"acertos": acertos, "percentual": percentual}
-    }

@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from typing import Optional, List
 
 from app.core.database import get_db
-from app.models.schema_db import Avaliacao, Materia, StatusAvaliacaoEnum, TipoAvaliacaoEnum
+from app.models.schema_db import Avaliacao, Revisao, Aula, Subtopico, Topico, Materia, StatusAvaliacaoEnum, StatusRevisaoEnum
 
 router = APIRouter(tags=["Painel de Visão Geral e Cronograma"])
 
@@ -106,28 +106,82 @@ def atualizar_avaliacao_inline(avaliacao_id: int, dados: AvaliacaoUpdate, db: Se
 def obter_dashboard_visao_geral(db: Session = Depends(get_db)):
     hoje = date.today()
     
-    # Próximas avaliações em menos de 7 dias
+    # 1. Alertas de Provas (Menos de 7 dias ou Hoje)
     data_limite = hoje + timedelta(days=7)
     provas_proximas = db.query(Avaliacao).filter(
         Avaliacao.data >= hoje,
         Avaliacao.data <= data_limite,
         Avaliacao.status != StatusAvaliacaoEnum.CONCLUIDO
-    ).all()
+    ).order_by(Avaliacao.data.asc()).all()
     
     alertas = [
-        f"{p.materia.nome if p.materia else 'Geral'} - {p.tipo_avaliacao.value if hasattr(p.tipo_avaliacao, 'value') else p.tipo_avaliacao} (Daqui a {(p.data - hoje).days} dias)"
+        {
+            "id": p.id,
+            "disciplina": p.materia.nome if p.materia else "Geral",
+            "tipo": p.tipo_avaliacao.value if hasattr(p.tipo_avaliacao, 'value') else str(p.tipo_avaliacao),
+            "dias_restantes": (p.data - hoje).days,
+            "data": p.data.isoformat()
+        }
         for p in provas_proximas
     ]
 
+    # 2. Agenda Dinâmica (Revisões Pendentes para Hoje ou Atrasadas priorizando pior desempenho)
+    revisoes_pendentes = db.query(Revisao).join(Aula).join(Subtopico).join(Topico).join(Materia).filter(
+        Revisao.data_agendada <= hoje,
+        Revisao.status == StatusRevisaoEnum.PENDENTE
+    ).order_by(
+        Subtopico.questoes_percentual.asc(), # 1ª Prioridade: Menor nota aparece primeiro
+        Revisao.data_agendada.asc()          # 2ª Prioridade: Data mais antiga
+    ).all()
+
+    agenda = [
+        {
+            "id": r.id,
+            "disciplina": r.aula.subtopico.topico.materia.nome,
+            "subtopico": r.aula.subtopico.nome,
+            "aproveitamento": r.aula.subtopico.questoes_percentual or 0.0, # Enviando o % para a UI
+            "revisao": f"Rev {r.numero_revisao}",
+            "atrasada": r.data_agendada < hoje
+        }
+        for r in revisoes_pendentes
+    ]
+    # 3. Desempenho Consolidado por Disciplina e Média Geral
+    materias = db.query(Materia).all()
+    desempenho = []
+    soma_geral = 0
+    total_subtopicos_geral = 0
+
+    for m in materias:
+        soma_materia = 0
+        total_subtopicos = 0
+        for t in m.topicos:
+            for s in t.subtopicos:
+                soma_materia += s.questoes_percentual or 0
+                total_subtopicos += 1
+                soma_geral += s.questoes_percentual or 0
+                total_subtopicos_geral += 1
+        
+        if total_subtopicos > 0:
+            media = soma_materia / total_subtopicos
+            desempenho.append({
+                "disciplina": m.nome,
+                "aproveitamento": round(media, 1)
+            })
+    
+    # Ordena as disciplinas pelo menor aproveitamento (foco onde precisa melhorar)
+    desempenho = sorted(desempenho, key=lambda x: x["aproveitamento"])
+
+    aproveitamento_geral = round(soma_geral / total_subtopicos_geral, 1) if total_subtopicos_geral > 0 else 0.0
+
     return {
-        "desempenho_consolidado": [{"disciplina": "Anatomia", "aproveitamento": 85.0}],
-        "agenda_dinamica": {
-            "titulo": "O QUE REVISAR HOJE?",
-            "tarefas": []
-        },
+        "aproveitamento_medio_geral": aproveitamento_geral,
         "alertas": {
             "titulo": "PRÓXIMAS AVALIAÇÕES E PROVAS",
             "provas_proximas": alertas
         },
-        "aproveitamento_medio_geral": 80.0
+        "agenda_dinamica": {
+            "titulo": "O QUE REVISAR HOJE?",
+            "tarefas": agenda
+        },
+        "desempenho_consolidado": desempenho
     }

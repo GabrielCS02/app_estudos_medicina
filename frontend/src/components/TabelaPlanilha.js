@@ -1,5 +1,43 @@
-import React, { Fragment } from "react";
+import React, { Fragment, useState, useEffect } from "react";
 import api from "../services/api";
+
+// Subcomponente isolado para gerenciar a digitação sem perder o foco da tabela
+const AcertosInput = ({ subtopicoId, valorInicial, onRefresh }) => {
+  const [valor, setValor] = useState(valorInicial ?? 0);
+
+  useEffect(() => {
+    setValor(valorInicial ?? 0);
+  }, [valorInicial]);
+
+  const handleBlur = async () => {
+    if (valor === (valorInicial ?? 0)) return; // Não faz requisição se o valor não mudou
+    try {
+      await api.patch(`/subtopicos/${subtopicoId}/acertos?valor=${valor}`);
+      if (onRefresh) onRefresh(); // Recarrega os dados para atualizar o aproveitamento
+    } catch (error) {
+      console.error(error);
+      alert("Erro ao salvar acertos.");
+    }
+  };
+
+  return (
+    <input
+      type="number"
+      min="0"
+      max="20"
+      className="w-16 border border-gray-300 rounded p-1 text-center font-bold text-blue-700 focus:ring-blue-500 shadow-sm"
+      value={valor}
+      onChange={(e) => {
+        let v = parseInt(e.target.value);
+        if (isNaN(v)) v = 0;
+        if (v < 0) v = 0;
+        if (v > 20) v = 20;
+        setValor(v);
+      }}
+      onBlur={handleBlur}
+    />
+  );
+};
 
 export default function TabelaPlanilha({
   detalhes,
@@ -19,10 +57,9 @@ export default function TabelaPlanilha({
 
   // Função para alternar o Estudo Base direto na linha do subtópico com confirmação
   const handleToggleEstudoBase = async (sub) => {
-    // Se estiver SIM (true) e o usuário clicar para desmarcar, pede confirmação
     if (sub.estudo_base) {
       const confirmou = window.confirm(
-        `Tem certeza que deseja desmarcar o Estudo Base de "${sub.nome}"? A data da aula e as revisões agendadas serão apagadas.`,
+        `Tem certeza que deseja desmarcar o Estudo Base de "${sub.nome}"? A data da aula e as revisões agendadas serão apagadas.`
       );
       if (!confirmou) return;
     }
@@ -64,6 +101,9 @@ export default function TabelaPlanilha({
                 Rev 3 (30d)
               </th>
               <th className="p-3 font-bold border-r border-gray-300 text-center w-24">
+                Acertos
+              </th>
+              <th className="p-3 font-bold border-r border-gray-300 text-center w-24">
                 Aprov.
               </th>
               <th className="p-3 font-bold text-center w-28">Dificuldade</th>
@@ -93,7 +133,7 @@ export default function TabelaPlanilha({
                         </div>
                       </td>
                       <td
-                        colSpan="8"
+                        colSpan="9"
                         className="p-4 text-gray-400 italic bg-white text-center"
                       >
                         Nenhum subtópico cadastrado.
@@ -105,7 +145,7 @@ export default function TabelaPlanilha({
                       const revs = [1, 2, 3].map((num) =>
                         aula
                           ? aula.revisoes.find((r) => r.numero === num)
-                          : null,
+                          : null
                       );
 
                       return (
@@ -136,7 +176,7 @@ export default function TabelaPlanilha({
                             </span>
                           </td>
 
-                          {/* ESTUDO BASE INDIVIDUAL POR SUBTÓPICO */}
+                          {/* ESTUDO BASE */}
                           <td className="p-3 border-r border-gray-200 text-center bg-white align-middle">
                             <button
                               onClick={() => handleToggleEstudoBase(sub)}
@@ -150,17 +190,16 @@ export default function TabelaPlanilha({
                             </button>
                           </td>
 
+                          {/* DATA DA AULA */}
                           <td className="p-3 border-r border-gray-200 text-center bg-white font-medium text-gray-600">
                             {aula ? (
-                              new Date(aula.data_aula).toLocaleDateString(
-                                "pt-BR",
-                              )
+                              new Date(aula.data_aula).toLocaleDateString("pt-BR")
                             ) : (
                               <span className="text-gray-300">-</span>
                             )}
                           </td>
 
-                          {/* Colunas de Revisão */}
+                          {/* COLUNAS DE REVISÃO */}
                           {revs.map((rev, rIdx) => (
                             <td
                               key={rIdx}
@@ -171,43 +210,71 @@ export default function TabelaPlanilha({
                               ) : (
                                 <div className="flex flex-col items-center gap-1">
                                   <span
-                                    className={`text-xs font-medium ${rev.status === "Concluída" ? "text-green-700 line-through" : "text-gray-800"}`}
+                                    className={`text-xs font-medium ${
+                                      rev.status === "Concluída"
+                                        ? "text-gray-400 line-through"
+                                        : "text-gray-800"
+                                    }`}
                                   >
-                                    {new Date(rev.data).toLocaleDateString(
-                                      "pt-BR",
-                                    )}
+                                    {new Date(rev.data).toLocaleDateString("pt-BR")}
                                   </span>
                                   <button
                                     onClick={() =>
-                                      onToggleRevisao(
-                                        topicoIdx,
-                                        subIdx,
-                                        rIdx + 1,
-                                      )
+                                      onToggleRevisao(topicoIdx, subIdx, rIdx + 1)
                                     }
-                                    className={`text-[10px] px-2 py-1 rounded-full font-bold uppercase tracking-wider transition ${rev.status === "Concluída" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500 hover:bg-blue-100 hover:text-blue-700"}`}
+                                    className={`text-[10px] px-2 py-1 rounded-full font-bold uppercase tracking-wider transition ${
+                                      rev.status === "Concluída"
+                                        ? "bg-green-100 text-green-700"
+                                        : "bg-gray-100 text-gray-500 hover:bg-blue-100 hover:text-blue-700"
+                                    }`}
                                   >
-                                    {rev.status === "Concluída"
-                                      ? "✓ OK"
-                                      : "Pendente"}
+                                    {rev.status === "Concluída" ? "✓ OK" : "Pendente"}
                                   </button>
                                 </div>
                               )}
                             </td>
                           ))}
 
-                          <td className="p-3 border-r border-gray-200 text-center bg-white">
-                            <span
-                              className={`text-sm font-bold ${sub.aproveitamento >= 70 ? "text-green-600" : sub.aproveitamento >= 50 ? "text-yellow-600" : "text-red-600"}`}
-                            >
-                              {sub.aproveitamento}%
-                            </span>
+                          {/* COLUNA: ACERTOS */}
+                          <td className="p-3 border-r border-gray-200 text-center bg-white align-middle">
+                            {sub.estudo_base ? (
+                              <AcertosInput
+                                subtopicoId={sub.id}
+                                valorInicial={sub.acertos}
+                                onRefresh={onRefresh}
+                              />
+                            ) : (
+                              <span className="text-gray-300">-</span>
+                            )}
                           </td>
+
+                          {/* COLUNA: APROVEITAMENTO */}
+                          <td className="p-3 border-r border-gray-200 text-center bg-white">
+                            {sub.estudo_base ? (
+                              <span
+                                className={`text-sm font-bold ${
+                                  sub.aproveitamento >= 70
+                                    ? "text-green-600"
+                                    : sub.aproveitamento >= 50
+                                    ? "text-yellow-600"
+                                    : "text-red-600"
+                                }`}
+                              >
+                                {sub.aproveitamento ?? 0}%
+                              </span>
+                            ) : (
+                              <span className="text-gray-300">-</span>
+                            )}
+                          </td>
+                          
+                          {/* COLUNA: DIFICULDADE */}
                           <td className="p-3 text-center bg-white">
                             <span
-                              className={`px-3 py-1 rounded-md font-bold text-xs inline-block min-w-[2.5rem] shadow-sm ${getCorTag(sub.dificuldade_cor)}`}
+                              className={`px-2 py-1 rounded-md font-bold text-[10px] uppercase tracking-wider inline-block w-20 shadow-sm ${getCorTag(
+                                sub.dificuldade_cor
+                              )}`}
                             >
-                              {sub.dificuldade_grau ?? sub.dificuldade_cor}
+                              {sub.dificuldade_grau}
                             </span>
                           </td>
                         </tr>

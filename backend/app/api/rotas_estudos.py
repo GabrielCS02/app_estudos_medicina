@@ -95,6 +95,7 @@ def obter_detalhes_materia(materia_id: int, db: Session = Depends(get_db)):
                 "dificuldade_grau": s.dificuldade_grau,
                 "dificuldade_cor": s.dificuldade_cor.value,
                 "aproveitamento": s.questoes_percentual,
+                "acertos": s.questoes_acertos, 
                 "aula": aula_data
             })
         resultado["topicos"].append(topico_dict)
@@ -188,3 +189,24 @@ def toggle_estudo_base(subtopico_id: int, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(subtopico)
     return {"status": "sucesso", "estudo_base": subtopico.estudo_base}
+
+@router.patch("/subtopicos/{subtopico_id}/acertos")
+def atualizar_acertos_subtopico(subtopico_id: int, valor: int, db: Session = Depends(get_db)):
+    """Atualiza a quantidade de acertos (0 a 20) e recalcula o aproveitamento."""
+    if not (0 <= valor <= 20):
+        raise HTTPException(status_code=400, detail="Os acertos devem estar entre 0 e 20.")
+        
+    subtopico = db.query(Subtopico).filter(Subtopico.id == subtopico_id).first()
+    if not subtopico:
+        raise HTTPException(status_code=404, detail="Subtópico não encontrado")
+        
+    # Atualiza acertos e recalcula o percentual com base em 20 questões
+    subtopico.questoes_acertos = valor
+    subtopico.questoes_percentual = round((valor / 20.0) * 100, 1)
+    
+    db.commit()
+    return {
+        "status": "sucesso", 
+        "acertos": subtopico.questoes_acertos, 
+        "aproveitamento": subtopico.questoes_percentual
+    }

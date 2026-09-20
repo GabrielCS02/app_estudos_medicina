@@ -86,6 +86,27 @@ export default function PainelMaterias() {
     }
   };
 
+  const handleUpdateAcertos = async (topicoIdx, subIdx, subtopicoId, novoValor) => {
+    let valor = parseInt(novoValor);
+    if (isNaN(valor)) valor = 0;
+    if (valor < 0) valor = 0;
+    if (valor > 20) valor = 20;
+
+    // Atualização Otimista (Muda instantaneamente na tela)
+    const novosDetalhes = { ...detalhes };
+    novosDetalhes.topicos[topicoIdx].subtopicos[subIdx].acertos = valor;
+    novosDetalhes.topicos[topicoIdx].subtopicos[subIdx].aproveitamento = (valor / 20) * 100;
+    setDetalhes(novosDetalhes);
+
+    try {
+      // Salva no banco de dados em segundo plano
+      await api.patch(`/subtopicos/${subtopicoId}/acertos?valor=${valor}`);
+    } catch (error) {
+      console.error("Erro ao atualizar acertos", error);
+      alert("Erro ao salvar a quantidade de acertos.");
+    }
+  };
+
   const toggleStatusRevisao = (materiaId, topicoIdx, subIdx, revNumero) => {
     const novas = [...materiasComDetalhes];
     const mat = novas.find(m => m.id === materiaId);

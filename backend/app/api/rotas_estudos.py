@@ -23,22 +23,19 @@ from app.services.motor_calculos import (
 router = APIRouter(tags=["Estudos e Estrutura"])
 
 # ==========================================
-# ROTAS DE HIERARQUIA E CADASTRO (Regras A1 a A4 e A7)
+# ROTAS DE HIERARQUIA E CADASTRO
 # ==========================================
 
 @router.post("/materias/")
 def criar_materia(nome: str, db: Session = Depends(get_db)):
     """Cria uma nova matéria garantindo que não haja duplicatas por erro de digitação."""
-    # Remove espaços em branco antes e depois do texto
     nome_limpo = nome.strip()
     
-    # Faz uma busca no banco ignorando maiúsculas e minúsculas (func.lower)
     materia_existente = db.query(Materia).filter(
         func.lower(Materia.nome) == nome_limpo.lower()
     ).first()
     
     if materia_existente:
-        # Se já existir, retorna o ID da matéria existente para não duplicar
         return {"status": "existente", "materia_id": materia_existente.id, "nome": materia_existente.nome}
         
     nova_materia = Materia(nome=nome_limpo)
@@ -98,7 +95,7 @@ def obter_detalhes_materia(materia_id: int, db: Session = Depends(get_db)):
             topico_dict["subtopicos"].append({
                 "id": s.id,
                 "nome": s.nome,
-                "estudo_base": s.estudo_base, # Adicionado aqui
+                "estudo_base": s.estudo_base,
                 "dificuldade_cor": s.dificuldade_cor.value,
                 "aproveitamento": s.questoes_percentual,
                 "aula": aula_data
@@ -118,7 +115,7 @@ def criar_topico(materia_id: int, nome: str, estudo_base: bool = False, db: Sess
 
 @router.post("/topicos/{topico_id}/subtopicos/")
 def criar_subtopico(topico_id: int, nome: str, dificuldade: int, db: Session = Depends(get_db)):
-    """Cria um novo subtópico e já converte a dificuldade (0-10) em Cor (A3, A7)[cite: 4]."""
+    """Cria um novo subtópico e já converte a dificuldade (0-10) em Cor[cite: 4]."""
     if not (0 <= dificuldade <= 10):
         raise HTTPException(status_code=400, detail="A dificuldade deve estar entre 0 e 10.")
     
@@ -129,7 +126,8 @@ def criar_subtopico(topico_id: int, nome: str, dificuldade: int, db: Session = D
         topico_id=topico_id, 
         nome=nome, 
         dificuldade_grau=dificuldade, 
-        dificuldade_cor=cor_enum
+        dificuldade_cor=cor_enum,
+        estudo_base=False
     )
     db.add(novo_subtopico)
     db.commit()
@@ -153,46 +151,40 @@ def toggle_estudo_base(subtopico_id: int, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(subtopico)
     return {"status": "sucesso", "estudo_base": subtopico.estudo_base}
+
 @router.get("/subtopicos/")
 def listar_subtopicos(db: Session = Depends(get_db)):
-    """Retorna todos os subtópicos reais do banco para alimentar a barra de Autocomplete."""
+    """Retorna todos os subtópicos reais do banco para alimentar o autocomplete."""
     subtopicos = db.query(Subtopico).all()
-    # Retorna o ID e uma string formatada contendo o nome do subtópico para facilitar a busca do usuário
     return [{"id": s.id, "nome": f"{s.nome} ({s.topico.materia.nome if s.topico and s.topico.materia else 'Sem Matéria'})"} for s in subtopicos]
 
 # ==========================================
-# ROTAS DE AULAS E REVISÕES (Regras A5 e A6)
+# ROTAS DE AULAS E REVISÕES
 # ==========================================
 
 @router.post("/subtopicos/{subtopico_id}/registrar-aula")
 def registrar_aula(subtopico_id: int, data_aula: date, acertos: int, db: Session = Depends(get_db)):
-    """
-    Recebe o input de uma aula, calcula percentuais, atualiza o subtópico e agenda as 3 revisões[cite: 4].
-    """
+    """Recebe o input de uma aula, calcula percentuais, atualiza o subtópico e agenda as 3 revisões[cite: 4]."""
     subtopico = db.query(Subtopico).filter(Subtopico.id == subtopico_id).first()
     if not subtopico:
          raise HTTPException(status_code=404, detail="Subtópico não encontrado")
 
-    # 1. Utiliza o motor de cálculos para gerar as métricas
     revisoes = agendar_revisoes(data_aula)
     percentual = calcular_percentual_acertos(acertos)
     
-    # 2. Atualiza a pontuação do subtópico no banco de dados
     subtopico.questoes_acertos = acertos
     subtopico.questoes_percentual = percentual
     
-    # 3. Registra a data da Aula como âncora cronológica
     nova_aula = Aula(subtopico_id=subtopico_id, data_aula=data_aula)
     db.add(nova_aula)
-    db.flush() # Processa no banco para gerar o ID da aula antes do commit final
+    db.flush()
     
-    # 4. Registra as 3 instâncias de Revisão atreladas a esta aula
     rev1 = Revisao(aula_id=nova_aula.id, numero_revisao=1, data_agendada=revisoes["rev_1"], status=StatusRevisaoEnum.PENDENTE)
     rev2 = Revisao(aula_id=nova_aula.id, numero_revisao=2, data_agendada=revisoes["rev_2"], status=StatusRevisaoEnum.PENDENTE)
     rev3 = Revisao(aula_id=nova_aula.id, numero_revisao=3, data_agendada=revisoes["rev_3"], status=StatusRevisaoEnum.PENDENTE)
     
     db.add_all([rev1, rev2, rev3])
-    db.commit() # Salva tudo de uma vez garantindo a integridade dos dados
+    db.commit()
     
     return {
         "status": "Aula e revisões gravadas com sucesso no banco de dados.",

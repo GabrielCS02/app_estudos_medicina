@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import api from "../services/api";
 
 export default function ModuloRevisoes() {
@@ -8,20 +8,38 @@ export default function ModuloRevisoes() {
   const [datasRevisao, setDatasRevisao] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // Regra A5: O 100% de aproveitamento baseia-se em um bloco padrão de 20 questões
+  // Estados exclusivos para o Autocomplete de Subtópicos
+  const [searchTerm, setSearchTerm] = useState("");
+  const [subtopicosList, setSubtopicosList] = useState([]);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  // Regra A5: O 100% de aproveitamento baseia-se em um bloco padrão de 20 questões[cite: 3]
   const percentual = ((acertos / 20) * 100).toFixed(1);
+
+  // Carrega a lista de subtópicos ao abrir a tela
+  useEffect(() => {
+    api.get("/subtopicos/")
+      .then(response => setSubtopicosList(response.data))
+      .catch(error => console.error("Erro ao carregar subtópicos", error));
+  }, []);
+
+  // Lógica de filtragem ("complementar escrita")
+  const subtopicosFiltrados = subtopicosList.filter(sub =>
+    sub.nome.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!subtopicoId) {
+      alert("Por favor, selecione um subtópico válido na lista.");
+      return;
+    }
+    
     setLoading(true);
-
     try {
-      // Consome o endpoint POST /subtopicos/{subtopico_id}/registrar-aula
       const response = await api.post(
         `/subtopicos/${subtopicoId}/registrar-aula?data_aula=${dataAula}&acertos=${acertos}`,
       );
-
-      // Armazena as datas calculadas pelo backend (1, 7 e 30 dias)
       setDatasRevisao(response.data.datas_revisao);
     } catch (error) {
       console.error("Erro ao registrar revisão", error);
@@ -38,23 +56,56 @@ export default function ModuloRevisoes() {
       </h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Formulário de Input */}
         <form
           onSubmit={handleSubmit}
           className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 space-y-6"
         >
-          <div>
+          {/* Campo Autocomplete de Subtópico */}
+          <div className="relative">
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              ID do Subtópico
+              Buscar Subtópico
             </label>
             <input
-              type="number"
-              placeholder="Ex: 1 (Para MVP, digite o ID numérico)"
+              type="text"
+              placeholder="Digite para buscar..."
               className="w-full border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500"
-              value={subtopicoId}
-              onChange={(e) => setSubtopicoId(e.target.value)}
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setIsDropdownOpen(true);
+                setSubtopicoId(""); // Reseta o ID caso o usuário mude o texto após selecionar
+              }}
+              onFocus={() => setIsDropdownOpen(true)}
+              // O timeout garante que o clique na lista ocorra antes de o menu fechar
+              onBlur={() => setTimeout(() => setIsDropdownOpen(false), 200)}
               required
             />
+            
+            {/* Lista Suspensa (Dropdown) */}
+            {isDropdownOpen && searchTerm && (
+              <ul className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                {subtopicosFiltrados.length > 0 ? (
+                  subtopicosFiltrados.map((sub) => (
+                    <li
+                      key={sub.id}
+                      className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-sm text-gray-700 border-b last:border-b-0"
+                      onClick={() => {
+                        setSubtopicoId(sub.id);
+                        setSearchTerm(sub.nome); // Preenche o input com o nome completo
+                        setIsDropdownOpen(false);
+                      }}
+                    >
+                      <span className="font-semibold text-blue-600 mr-2">#{sub.id}</span>
+                      {sub.nome}
+                    </li>
+                  ))
+                ) : (
+                  <li className="px-4 py-2 text-sm text-gray-500">
+                    Nenhum subtópico encontrado
+                  </li>
+                )}
+              </ul>
+            )}
           </div>
 
           <div>
@@ -87,7 +138,6 @@ export default function ModuloRevisoes() {
               <span className="text-gray-600 font-medium">acertos</span>
             </div>
 
-            {/* Feedback visual dinâmico em tempo real */}
             <div className="mt-4 flex items-center justify-between">
               <span className="text-sm text-gray-500">
                 Aproveitamento Calculado:
@@ -109,7 +159,6 @@ export default function ModuloRevisoes() {
           </button>
         </form>
 
-        {/* Timeline de Revisões (Renderização Condicional) */}
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
           <h2 className="text-xl font-semibold text-gray-800 mb-6 border-b pb-2">
             Status do Agendamento
@@ -136,7 +185,6 @@ export default function ModuloRevisoes() {
             </div>
           ) : (
             <div className="relative border-l-2 border-blue-200 ml-3 space-y-8">
-              {/* Revisão 1 (24h) */}
               <div className="relative pl-6">
                 <div className="absolute w-4 h-4 bg-blue-500 rounded-full -left-[9px] top-1 border-2 border-white"></div>
                 <h3 className="font-bold text-blue-800">Revisão 1 (+1 dia)</h3>
@@ -145,7 +193,6 @@ export default function ModuloRevisoes() {
                 </p>
               </div>
 
-              {/* Revisão 2 (7 dias) */}
               <div className="relative pl-6">
                 <div className="absolute w-4 h-4 bg-blue-400 rounded-full -left-[9px] top-1 border-2 border-white"></div>
                 <h3 className="font-bold text-blue-700">Revisão 2 (+7 dias)</h3>
@@ -154,7 +201,6 @@ export default function ModuloRevisoes() {
                 </p>
               </div>
 
-              {/* Revisão 3 (30 dias) */}
               <div className="relative pl-6">
                 <div className="absolute w-4 h-4 bg-blue-300 rounded-full -left-[9px] top-1 border-2 border-white"></div>
                 <h3 className="font-bold text-blue-600">

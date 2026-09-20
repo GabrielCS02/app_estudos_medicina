@@ -71,6 +71,22 @@ class Subtopico(Base):
     topico_id: Mapped[int] = mapped_column(ForeignKey("topicos.id"))
     nome: Mapped[str] = mapped_column(String(150), nullable=False)
     
+    # Regra de Estudo Base movida/ajustada para o Subtópico
+    estudo_base: Mapped[bool] = mapped_column(Boolean, default=False)
+    
+    dificuldade_grau: Mapped[int] = mapped_column(Integer, nullable=False) 
+    dificuldade_cor: Mapped[DificuldadeCorEnum] = mapped_column(SAEnum(DificuldadeCorEnum), nullable=False)
+    
+    questoes_acertos: Mapped[Optional[int]] = mapped_column(Integer, default=0)
+    questoes_percentual: Mapped[Optional[float]] = mapped_column(Float, default=0.0) 
+    
+    topico: Mapped["Topico"] = relationship(back_populates="subtopicos")
+    aulas: Mapped[List["Aula"]] = relationship(back_populates="subtopico", cascade="all, delete")
+    __tablename__ = "subtopicos"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    topico_id: Mapped[int] = mapped_column(ForeignKey("topicos.id"))
+    nome: Mapped[str] = mapped_column(String(150), nullable=False)
+    
     # Regra A3 e A7: Dificuldade do subtópico
     dificuldade_grau: Mapped[int] = mapped_column(Integer, nullable=False) 
     dificuldade_cor: Mapped[DificuldadeCorEnum] = mapped_column(SAEnum(DificuldadeCorEnum), nullable=False)

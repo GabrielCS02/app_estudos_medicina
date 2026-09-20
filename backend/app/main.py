@@ -4,6 +4,12 @@ from fastapi.middleware.cors import CORSMiddleware
 # Importando os arquivos de rotas que criamos
 from app.api import rotas_estudos, rotas_painel
 
+# --- Adicione estas 3 linhas para gerar o banco automaticamente ---
+from app.core.database import engine
+from app.models.schema_db import Base
+Base.metadata.create_all(bind=engine)
+# -----------------------------------------------------------------
+
 app = FastAPI(title="API - Acompanhamento de Estudos Medicina")
 
 # Configuração do Middleware CORS para permitir que o Frontend (Chat 3) se comunique com esta API

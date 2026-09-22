@@ -1,45 +1,39 @@
-import React, { useState } from "react";
-import Dashboard from "./pages/Dashboard";
-import PainelMaterias from "./pages/PainelMaterias";
-import CronogramaAvaliacoes from "./pages/CronogramaAvaliacoes";
+import React, { useState } from 'react';
+import Dashboard from './pages/Dashboard';
+import PainelMaterias from './pages/PainelMaterias';
+import CronogramaAvaliacoes from './pages/CronogramaAvaliacoes';
 
 export default function App() {
-  const [abaAtiva, setAbaAtiva] = useState("dashboard");
+  const [abaAtiva, setAbaAtiva] = useState('dashboard');
 
   return (
-    <div className="App min-h-screen bg-slate-50 flex flex-col font-sans text-slate-800">
-      {/* Barra de Navegação Premium */}
-      <nav className="bg-white/80 backdrop-blur-md border-b border-slate-200 shadow-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between h-16">
-          <div className="flex items-center gap-2 text-blue-600 font-black text-lg tracking-tight">
-            <svg
-              className="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-              ></path>
-            </svg>
-            MedTracker
+    <div className="App min-h-screen bg-[#F0F7F7] flex flex-col font-sans text-slate-800">
+      
+      {/* Menu Flutuante (Estilo Pílula) */}
+      <nav className="sticky top-2 sm:top-4 z-40 px-2 sm:px-8 pt-2 pb-4">
+        <div className="max-w-4xl mx-auto bg-white/90 backdrop-blur-md rounded-full shadow-[0_10px_40px_-10px_rgba(13,116,108,0.12)] px-3 sm:px-6 h-16 flex items-center justify-between border border-white">
+          
+          <div className="flex items-center gap-2 sm:gap-3 text-[#0D5C53] font-black text-lg sm:text-xl tracking-tight shrink-0">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-[#E5F3F1] rounded-full flex items-center justify-center text-xl sm:text-2xl">
+              👩‍⚕️
+            </div>
+            <span className="hidden sm:block">Medicina aplicada</span>
           </div>
-          <div className="flex gap-2 sm:gap-4 font-medium overflow-x-auto scrollbar-hide whitespace-nowrap pl-4">
+
+          {/* Botões de Navegação - Sem o Módulo de Revisões */}
+          <div className="flex gap-1 sm:gap-3 font-semibold overflow-x-auto scrollbar-hide whitespace-nowrap pl-2 sm:pl-4">
             {[
-              { id: "dashboard", label: "Visão Geral" },
-              { id: "materias", label: "Planilha de Acompanhamento" },
-              { id: "cronograma", label: "Cronograma de Provas" },
-            ].map((aba) => (
-              <button
+              { id: 'dashboard', label: 'Visão Geral' },
+              { id: 'materias', label: 'Acompanhamento' },
+              { id: 'cronograma', label: 'Provas' }
+            ].map(aba => (
+              <button 
                 key={aba.id}
-                onClick={() => setAbaAtiva(aba.id)}
-                className={`px-4 py-2 rounded-full text-sm transition-all duration-200 ${
-                  abaAtiva === aba.id
-                    ? "bg-blue-600 text-white shadow-md shadow-blue-200"
-                    : "text-slate-600 hover:bg-slate-100 hover:text-blue-600"
+                onClick={() => setAbaAtiva(aba.id)} 
+                className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm transition-all duration-300 ease-out ${
+                  abaAtiva === aba.id 
+                    ? 'bg-[#0D8A72] text-white shadow-md shadow-[#0D8A72]/30 scale-105' 
+                    : 'text-slate-500 hover:bg-[#E5F3F1] hover:text-[#0D5C53]'
                 }`}
               >
                 {aba.label}
@@ -49,11 +43,11 @@ export default function App() {
         </div>
       </nav>
 
-      {/* Área Principal */}
+      {/* Área Principal Limpa */}
       <main className="flex-grow w-full">
-        {abaAtiva === "dashboard" && <Dashboard />}
-        {abaAtiva === "materias" && <PainelMaterias />}
-        {abaAtiva === "cronograma" && <CronogramaAvaliacoes />}
+        {abaAtiva === 'dashboard' && <Dashboard />}
+        {abaAtiva === 'materias' && <PainelMaterias />}
+        {abaAtiva === 'cronograma' && <CronogramaAvaliacoes />}
       </main>
     </div>
   );

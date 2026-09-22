@@ -1,251 +1,142 @@
-import React, { useState, useEffect } from 'react';
-import api from '../services/api';
+import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 
-export default function ModalAvaliacao({ isOpen, onClose, onSave }) {
-  const [materias, setMaterias] = useState([]);
-  const [materiaId, setMateriaId] = useState('');
-  const [tipoAvaliacao, setTipoAvaliacao] = useState('Prova Prática');
-  const [data, setData] = useState('');
-  const [valor, setValor] = useState(10.0);
-
-  // Estados para os subtópicos dinâmicos
-  const [subtopicosDisponiveis, setSubtopicosDisponiveis] = useState([]);
-  const [subtopicosSelecionados, setSubtopicosSelecionados] = useState([]);
-  const [loadingSubtopicos, setLoadingSubtopicos] = useState(false);
-
-  const tiposDisponiveis = [
-    'Seminário',
-    'Relatório de Laboratório',
-    'OSCE',
-    'Prova Prática',
-    'Prova Teórica',
-    'Estudo de Caso',
-    'Trabalho / Artigo',
-    'Outro'
-  ];
-
-  // 1. Carrega as matérias cadastradas ao abrir a janela
-  useEffect(() => {
-    if (isOpen) {
-      api.get('/materias/')
-        .then(res => {
-          setMaterias(res.data);
-          if (res.data.length > 0) {
-            setMateriaId(res.data[0].id);
-          }
-        })
-        .catch(console.error);
-    }
-  }, [isOpen]);
-
-  // 2. Busca os subtópicos da matéria selecionada sempre que o materiaId mudar
-  useEffect(() => {
-    if (materiaId) {
-      setLoadingSubtopicos(true);
-      api.get(`/materias/${materiaId}/detalhes`)
-        .then(res => {
-          const lista = [];
-          (res.data.topicos || []).forEach(topico => {
-            (topico.subtopicos || []).forEach(sub => {
-              lista.push({
-                id: sub.id,
-                nome: sub.nome,
-                topicoNome: topico.nome
-              });
-            });
-          });
-          setSubtopicosDisponiveis(lista);
-          setSubtopicosSelecionados([]); // Limpa a seleção anterior ao trocar de matéria
-        })
-        .catch(console.error)
-        .finally(() => setLoadingSubtopicos(false));
-    } else {
-      setSubtopicosDisponiveis([]);
-      setSubtopicosSelecionados([]);
-    }
-  }, [materiaId]);
+export default function ModalAvaliacao({ isOpen, onClose, onSave, disciplinasAtivas = [] }) {
+  const [disciplina, setDisciplina] = useState('');
+  const [tipo, setTipo] = useState('Prova Prática');
+  const [conteudo, setConteudo] = useState('');
+  const [dataProva, setDataProva] = useState('');
+  const [valor, setValor] = useState(10);
 
   if (!isOpen) return null;
 
-  // Alterna a seleção de um subtópico individual
-  const handleToggleSubtopico = (nomeSub) => {
-    setSubtopicosSelecionados(prev =>
-      prev.includes(nomeSub)
-        ? prev.filter(item => item !== nomeSub)
-        : [...prev, nomeSub]
-    );
-  };
-
-  // Selecionar ou desselecionar todos os subtópicos visíveis
-  const handleSelectAll = () => {
-    if (subtopicosSelecionados.length === subtopicosDisponiveis.length) {
-      setSubtopicosSelecionados([]);
-    } else {
-      setSubtopicosSelecionados(subtopicosDisponiveis.map(s => s.nome));
-    }
-  };
-
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!materiaId) {
-      alert("Selecione uma matéria válida.");
-      return;
-    }
-
-    if (subtopicosSelecionados.length === 0) {
-      alert("Selecione ao menos 1 subtópico para o Conteúdo Cobrado.");
-      return;
-    }
-
-    // Une os subtópicos marcados separados por vírgula
-    const conteudoFormatado = subtopicosSelecionados.join(", ");
-
     onSave({
-      materia_id: parseInt(materiaId),
-      tipo_avaliacao: tipoAvaliacao,
-      conteudo_cobrado: conteudoFormatado,
-      data: data,
-      valor: parseFloat(valor)
+      disciplina,
+      tipo_avaliacao: tipo,
+      conteudo_cobrado: conteudo,
+      data: dataProva,
+      valor: parseFloat(valor),
+      status: "Pendente"
     });
-
-    setSubtopicosSelecionados([]);
-    setData('');
+    // Resetar campos
+    setDisciplina('');
+    setConteudo('');
+    setDataProva('');
+    setValor(10);
   };
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white p-6 rounded-lg w-full max-w-md shadow-xl space-y-4 max-h-[90vh] overflow-y-auto">
-        <h3 className="text-xl font-bold text-gray-800 border-b pb-2">
+  const modalContent = (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center font-sans">
+      
+      {/* Overlay com Desfoque */}
+      <div 
+        className="fixed inset-0 w-full h-full bg-slate-900/40 backdrop-blur-sm transition-opacity"
+        onClick={onClose}
+      ></div>
+
+      {/* Caixa do Pop-up */}
+      <div className="relative bg-white p-6 sm:p-8 rounded-[2rem] w-[90%] max-w-lg shadow-[0_20px_60px_-15px_rgba(13,116,108,0.2)] animate-fade-in max-h-[90vh] overflow-y-auto">
+        <h3 className="text-xl sm:text-2xl font-extrabold text-[#0D5C53] mb-6 tracking-tight">
           Cadastrar Nova Avaliação
         </h3>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* DISCIPLINA / MATÉRIA */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Disciplina / Matéria
-            </label>
-            <select
-              className="w-full border border-gray-300 p-2 rounded focus:ring-blue-500 focus:border-blue-500 bg-white"
-              value={materiaId}
-              onChange={(e) => setMateriaId(e.target.value)}
-              required
-            >
-              {materias.map(m => (
-                <option key={m.id} value={m.id}>{m.nome}</option>
-              ))}
-              {materias.length === 0 && (
-                <option value="">Nenhuma matéria cadastrada</option>
-              )}
-            </select>
-          </div>
-
-          {/* TIPO DE AVALIAÇÃO */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Tipo de Avaliação
-            </label>
-            <select
-              className="w-full border border-gray-300 p-2 rounded focus:ring-blue-500 focus:border-blue-500 bg-white"
-              value={tipoAvaliacao}
-              onChange={(e) => setTipoAvaliacao(e.target.value)}
-            >
-              {tiposDisponiveis.map(t => (
-                <option key={t} value={t}>{t}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* CONTEÚDO COBRADO (SELEÇÃO DE SUBTÓPICOS) */}
-          <div>
-            <div className="flex justify-between items-center mb-1">
-              <label className="block text-sm font-medium text-gray-700">
-                Conteúdo Cobrado ({subtopicosSelecionados.length} selecionado{subtopicosSelecionados.length === 1 ? '' : 's'})
+        
+        <form onSubmit={handleSubmit} className="space-y-5">
+          
+          {/* Disciplina e Tipo */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                Disciplina / Matéria
               </label>
-              {subtopicosDisponiveis.length > 0 && (
-                <button
-                  type="button"
-                  onClick={handleSelectAll}
-                  className="text-xs text-blue-600 hover:text-blue-800 font-medium"
-                >
-                  {subtopicosSelecionados.length === subtopicosDisponiveis.length
-                    ? 'Desmarcar todos'
-                    : 'Marcar todos'}
-                </button>
-              )}
+              <input 
+                type="text"
+                className="w-full bg-[#F8FBFB] border border-[#D0EBE7] hover:border-[#0D8A72] rounded-xl p-3 text-sm font-medium text-[#0D5C53] focus:ring-2 focus:ring-[#0D8A72] outline-none transition-all shadow-inner"
+                placeholder="Ex: Anatomia"
+                value={disciplina}
+                onChange={(e) => setDisciplina(e.target.value)}
+                required
+              />
             </div>
-
-            <div className="border border-gray-300 rounded-md p-2 bg-gray-50 max-h-44 overflow-y-auto space-y-1">
-              {loadingSubtopicos ? (
-                <p className="text-xs text-gray-500 text-center py-4">Buscando subtópicos...</p>
-              ) : subtopicosDisponiveis.length === 0 ? (
-                <p className="text-xs text-gray-400 text-center py-4 italic">
-                  Esta matéria ainda não possui subtópicos cadastrados na planilha.
-                </p>
-              ) : (
-                subtopicosDisponiveis.map(sub => (
-                  <label
-                    key={sub.id}
-                    className="flex items-center gap-2 p-1.5 rounded hover:bg-white cursor-pointer transition border border-transparent hover:border-gray-200"
-                  >
-                    <input
-                      type="checkbox"
-                      className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                      checked={subtopicosSelecionados.includes(sub.nome)}
-                      onChange={() => handleToggleSubtopico(sub.nome)}
-                    />
-                    <div className="text-xs">
-                      <span className="font-semibold text-gray-800">{sub.nome}</span>
-                      <span className="text-gray-400 ml-1.5 font-normal">({sub.topicoNome})</span>
-                    </div>
-                  </label>
-                ))
-              )}
+            <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                Tipo de Avaliação
+              </label>
+              <select 
+                className="w-full bg-[#F8FBFB] border border-[#D0EBE7] hover:border-[#0D8A72] rounded-xl p-3 text-sm font-medium text-[#0D5C53] focus:ring-2 focus:ring-[#0D8A72] outline-none transition-all shadow-inner cursor-pointer"
+                value={tipo}
+                onChange={(e) => setTipo(e.target.value)}
+              >
+                <option value="Prova Prática">Prova Prática</option>
+                <option value="Prova Teórica">Prova Teórica</option>
+                <option value="Seminário">Seminário</option>
+                <option value="Trabalho / Artigo">Trabalho / Artigo</option>
+                <option value="OSCE">OSCE</option>
+                <option value="Outro">Outro</option>
+              </select>
             </div>
           </div>
 
-          {/* DATA DA PROVA E VALOR */}
+          {/* Conteúdo Cobrado (Adaptado para Input de Texto Multilinhas limpo) */}
+          <div>
+            <div className="flex justify-between items-end mb-2">
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider">
+                Conteúdo Cobrado
+              </label>
+            </div>
+            <textarea 
+              rows="3"
+              className="w-full bg-[#F8FBFB] border border-[#D0EBE7] rounded-xl p-3 text-sm font-medium text-[#0D5C53] focus:ring-2 focus:ring-[#0D8A72] focus:border-[#0D8A72] outline-none transition-all shadow-inner placeholder-slate-300 resize-none" 
+              placeholder="Descreva os tópicos ou cole a lista de conteúdos..." 
+              value={conteudo} 
+              onChange={(e) => setConteudo(e.target.value)} 
+              required 
+            />
+          </div>
+
+          {/* Data e Valor */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
                 Data da Prova
               </label>
-              <input
-                type="date"
-                className="w-full border border-gray-300 p-2 rounded focus:ring-blue-500 focus:border-blue-500"
-                value={data}
-                onChange={(e) => setData(e.target.value)}
-                required
+              <input 
+                type="date" 
+                className="w-full bg-[#F8FBFB] border border-[#D0EBE7] rounded-xl p-3 text-sm font-medium text-[#0D5C53] focus:ring-2 focus:ring-[#0D8A72] outline-none transition-all shadow-inner cursor-pointer" 
+                value={dataProva} 
+                onChange={(e) => setDataProva(e.target.value)} 
+                required 
               />
             </div>
-
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
                 Valor (Nota Máx.)
               </label>
-              <input
-                type="number"
-                step="0.5"
-                className="w-full border border-gray-300 p-2 rounded focus:ring-blue-500 focus:border-blue-500"
-                value={valor}
-                onChange={(e) => setValor(e.target.value)}
-                required
+              <input 
+                type="number" 
+                step="0.1"
+                min="0"
+                className="w-full bg-[#F8FBFB] border border-[#D0EBE7] rounded-xl p-3 text-sm font-medium text-[#0D5C53] focus:ring-2 focus:ring-[#0D8A72] outline-none transition-all shadow-inner" 
+                value={valor} 
+                onChange={(e) => setValor(e.target.value)} 
+                required 
               />
             </div>
           </div>
 
-          {/* BOTÕES DE AÇÃO */}
-          <div className="flex justify-end gap-2 pt-4 border-t">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-gray-600 bg-gray-100 rounded hover:bg-gray-200 transition"
+          {/* Botões de Ação */}
+          <div className="flex justify-end gap-3 pt-6 mt-4 border-t border-slate-100">
+            <button 
+              type="button" 
+              onClick={onClose} 
+              className="px-5 py-2.5 text-sm font-bold text-slate-500 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors"
             >
               Cancelar
             </button>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition font-medium"
+            <button 
+              type="submit" 
+              className="px-6 py-2.5 text-sm font-bold bg-[#0D8A72] text-white rounded-full hover:bg-[#0D5C53] shadow-[0_8px_30px_rgb(13,138,114,0.2)] transition-all transform hover:-translate-y-0.5"
             >
               Salvar Avaliação
             </button>
@@ -254,4 +145,6 @@ export default function ModalAvaliacao({ isOpen, onClose, onSave }) {
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }

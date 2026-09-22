@@ -1,37 +1,66 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 
 export default function ModalTopico({ isOpen, onClose, onSave }) {
-  const [nome, setNome] = useState('');
-  const [estudoBase, setEstudoBase] = useState(false);
+  const [nomeTopico, setNomeTopico] = useState('');
 
   if (!isOpen) return null;
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSave(nome, estudoBase);
-    setNome('');
-    setEstudoBase(false);
+    onSave(nomeTopico);
+    setNomeTopico('');
   };
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white p-6 rounded-lg w-[90%] max-w-md shadow-xl mx-auto">
-        <h3 className="text-lg font-bold mb-4">Adicionar Novo Tópico</h3>
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Nome do Tópico</label>
-            <input type="text" className="w-full border p-2 rounded" value={nome} onChange={(e) => setNome(e.target.value)} required />
+  const modalContent = (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center font-sans">
+      
+      {/* Overlay com Desfoque */}
+      <div 
+        className="fixed inset-0 w-full h-full bg-slate-900/40 backdrop-blur-sm transition-opacity"
+        onClick={onClose}
+      ></div>
+
+      {/* Caixa do Pop-up */}
+      <div className="relative bg-white p-6 sm:p-8 rounded-[2rem] w-[90%] max-w-md shadow-[0_20px_60px_-15px_rgba(13,116,108,0.2)] animate-fade-in">
+        <h3 className="text-xl sm:text-2xl font-extrabold text-[#0D5C53] mb-6 tracking-tight">
+          Adicionar Novo Tópico
+        </h3>
+        
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div>
+            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+              Nome do Tópico
+            </label>
+            <input 
+              type="text" 
+              className="w-full bg-[#F8FBFB] border border-[#D0EBE7] rounded-xl p-3 text-sm font-medium text-[#0D5C53] focus:ring-2 focus:ring-[#0D8A72] focus:border-[#0D8A72] outline-none transition-all shadow-inner placeholder-slate-300" 
+              placeholder="Ex: Eletrocardiograma (ECG)" 
+              value={nomeTopico} 
+              onChange={(e) => setNomeTopico(e.target.value)} 
+              required 
+            />
           </div>
-          <div className="mb-6 flex items-center gap-2">
-            <input type="checkbox" checked={estudoBase} onChange={(e) => setEstudoBase(e.target.checked)} />
-            <label className="text-sm font-medium text-gray-700">Realizou Estudo Base?</label>
-          </div>
-          <div className="flex justify-end gap-2">
-            <button type="button" onClick={onClose} className="px-4 py-2 text-gray-600 bg-gray-100 rounded hover:bg-gray-200">Cancelar</button>
-            <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Salvar</button>
+
+          <div className="flex justify-end gap-3 pt-6 mt-2 border-t border-slate-100">
+            <button 
+              type="button" 
+              onClick={onClose} 
+              className="px-5 py-2.5 text-sm font-bold text-slate-500 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button 
+              type="submit" 
+              className="px-6 py-2.5 text-sm font-bold bg-[#0D8A72] text-white rounded-full hover:bg-[#0D5C53] shadow-[0_8px_30px_rgb(13,138,114,0.2)] transition-all transform hover:-translate-y-0.5"
+            >
+              Salvar
+            </button>
           </div>
         </form>
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }

@@ -8,10 +8,8 @@ import ModalMateria from '../components/ModalMateria';
 export default function PainelMaterias() {
   const [materiasComDetalhes, setMateriasComDetalhes] = useState([]);
   const [loading, setLoading] = useState(true);
-
   const [expanded, setExpanded] = useState({});
 
-  // Estados dos Modais
   const [isMateriaModalOpen, setMateriaModalOpen] = useState(false);
   const [isTopicModalOpen, setTopicModalOpen] = useState(false);
   const [isSubtopicModalOpen, setSubtopicModalOpen] = useState(false);
@@ -19,7 +17,7 @@ export default function PainelMaterias() {
   const [activeMateriaId, setActiveMateriaId] = useState(null);
   const [activeTopicId, setActiveTopicId] = useState(null);
 
-  const themeColors = ['bg-sky-100', 'bg-emerald-100', 'bg-fuchsia-100', 'bg-amber-100', 'bg-indigo-100', 'bg-rose-100', 'bg-teal-100', 'bg-violet-100'];
+  const themeColors = ['bg-sky-50', 'bg-emerald-50', 'bg-fuchsia-50', 'bg-amber-50', 'bg-indigo-50', 'bg-rose-50', 'bg-teal-50', 'bg-violet-50'];
 
   const carregarDados = async () => {
     setLoading(true);
@@ -32,38 +30,27 @@ export default function PainelMaterias() {
 
       setExpanded(prev => {
         const expInit = { ...prev };
-        resultados.forEach(m => {
-          if (expInit[m.id] === undefined) expInit[m.id] = true;
-        });
+        resultados.forEach(m => { if (expInit[m.id] === undefined) expInit[m.id] = true; });
         return expInit;
       });
     } catch (error) {
-      console.error("Erro ao carregar dados das matérias", error);
+      console.error(error);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    carregarDados();
-  }, []);
+  useEffect(() => { carregarDados(); }, []);
 
-  const toggleExpand = (materiaId) => {
-    setExpanded(prev => ({ ...prev, [materiaId]: !prev[materiaId] }));
-  };
+  const toggleExpand = (materiaId) => setExpanded(prev => ({ ...prev, [materiaId]: !prev[materiaId] }));
 
-  const handleSaveMateria = async (nomeMateria, nomeTopico) => {
+  const handleSaveMateria = async (nomeMateria, nomeTopico, estudoBase) => {
     try {
       const resMat = await api.post(`/materias/?nome=${encodeURIComponent(nomeMateria)}`);
-      const materiaId = resMat.data.materia_id;
-      
-      await api.post(`/materias/${materiaId}/topicos/?nome=${encodeURIComponent(nomeTopico)}&estudo_base=false`);
-      
+      await api.post(`/materias/${resMat.data.materia_id}/topicos/?nome=${encodeURIComponent(nomeTopico)}&estudo_base=${estudoBase}`);
       setMateriaModalOpen(false);
       carregarDados();
-    } catch (error) {
-      alert("Erro ao cadastrar matéria e tópico.");
-    }
+    } catch (error) { alert("Erro ao cadastrar."); }
   };
 
   const handleSaveTopic = async (nome, estudoBase) => {
@@ -71,9 +58,7 @@ export default function PainelMaterias() {
       await api.post(`/materias/${activeMateriaId}/topicos/?nome=${encodeURIComponent(nome)}&estudo_base=${estudoBase}`);
       setTopicModalOpen(false);
       carregarDados();
-    } catch (error) {
-      alert("Erro ao criar tópico.");
-    }
+    } catch (error) { alert("Erro ao criar tópico."); }
   };
 
   const handleSaveSubtopic = async (nome, dificuldade) => {
@@ -81,30 +66,7 @@ export default function PainelMaterias() {
       await api.post(`/topicos/${activeTopicId}/subtopicos/?nome=${encodeURIComponent(nome)}&dificuldade=${dificuldade}`);
       setSubtopicModalOpen(false);
       carregarDados();
-    } catch (error) {
-      alert("Erro ao criar subtópico.");
-    }
-  };
-
-  const handleUpdateAcertos = async (topicoIdx, subIdx, subtopicoId, novoValor) => {
-    let valor = parseInt(novoValor);
-    if (isNaN(valor)) valor = 0;
-    if (valor < 0) valor = 0;
-    if (valor > 20) valor = 20;
-
-    // Atualização Otimista (Muda instantaneamente na tela)
-    const novosDetalhes = { ...detalhes };
-    novosDetalhes.topicos[topicoIdx].subtopicos[subIdx].acertos = valor;
-    novosDetalhes.topicos[topicoIdx].subtopicos[subIdx].aproveitamento = (valor / 20) * 100;
-    setDetalhes(novosDetalhes);
-
-    try {
-      // Salva no banco de dados em segundo plano
-      await api.patch(`/subtopicos/${subtopicoId}/acertos?valor=${valor}`);
-    } catch (error) {
-      console.error("Erro ao atualizar acertos", error);
-      alert("Erro ao salvar a quantidade de acertos.");
-    }
+    } catch (error) { alert("Erro ao criar subtópico."); }
   };
 
   const toggleStatusRevisao = (materiaId, topicoIdx, subIdx, revNumero) => {
@@ -122,76 +84,73 @@ export default function PainelMaterias() {
 
   const getCorTag = (corEnum) => {
     switch (corEnum) {
-      case "Verde": return "bg-green-100 text-green-700 border border-green-300";
-      case "Amarelo": return "bg-yellow-100 text-yellow-700 border border-yellow-300";
-      case "Vermelho": return "bg-red-100 text-red-700 border border-red-300";
-      default: return "bg-gray-100 text-gray-700 border border-gray-300";
+      case "Verde": return "bg-emerald-50 text-emerald-700 border border-emerald-200";
+      case "Amarelo": return "bg-amber-50 text-amber-700 border border-amber-200";
+      case "Vermelho": return "bg-red-50 text-red-700 border border-red-200";
+      default: return "bg-slate-50 text-slate-700 border border-slate-200";
     }
   };
 
-  if (loading) return <div className="p-8 text-center text-gray-600">A carregar matérias...</div>;
+  if (loading) return <div className="p-12 text-center text-slate-500 font-medium animate-pulse">A carregar matérias...</div>;
 
   return (
-    <div className="p-6 max-w-[95%] mx-auto space-y-8 bg-gray-50 min-h-screen relative">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-        <h1 className="text-3xl font-bold text-gray-800">Planilha de Acompanhamento</h1>
+    <div className="p-4 sm:p-8 max-w-[98%] mx-auto space-y-8">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Planilha de Acompanhamento</h1>
         <button 
           onClick={() => setMateriaModalOpen(true)}
-          className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-5 rounded-md shadow transition flex items-center gap-2"
+          className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-5 rounded-full shadow-md shadow-blue-200 transition-all flex items-center gap-2"
         >
-          <span>+ Cadastrar Matéria</span>
+          + Cadastrar Matéria
         </button>
       </div>
 
       {materiasComDetalhes.length === 0 ? (
-        <div className="bg-white p-8 text-center text-gray-500 italic border rounded-lg shadow-sm">
+        <div className="bg-white p-12 text-center text-slate-500 font-medium border border-slate-200 rounded-2xl shadow-sm">
           Nenhuma matéria cadastrada. Clique no botão acima para começar.
         </div>
       ) : (
-        materiasComDetalhes.map((detalhes) => {
-          const isExpanded = expanded[detalhes.id];
-
-          return (
-            <div key={detalhes.id} className="bg-white rounded-lg shadow border border-gray-300 overflow-hidden mb-6">
-              {/* Barra Azul Clicável da Matéria */}
-              <div 
-                onClick={() => toggleExpand(detalhes.id)}
-                className="bg-blue-800 text-white p-4 flex justify-between items-center cursor-pointer hover:bg-blue-700 transition select-none border-b-4 border-blue-600"
-              >
-                <div className="flex items-center gap-4">
-                  <span className="text-xl font-bold uppercase tracking-wider">{detalhes.nome}</span>
-                  <span className="text-blue-200 text-sm font-medium">Tópicos: {detalhes.topicos.length}</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); setActiveMateriaId(detalhes.id); setTopicModalOpen(true); }}
-                    className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold py-1.5 px-3 rounded shadow transition"
-                  >
-                    + Novo Tópico
-                  </button>
-                  <span className="text-blue-200 text-lg font-bold">
-                    {isExpanded ? '▲' : '▼'}
-                  </span>
-                </div>
+        materiasComDetalhes.map((detalhes) => (
+          <div key={detalhes.id} className="bg-white rounded-2xl shadow-md shadow-slate-200/50 border border-slate-200 overflow-hidden mb-8 transition-all">
+            {/* Cabeçalho Limpo (Estilo Apple) */}
+            <div 
+              onClick={() => toggleExpand(detalhes.id)}
+              className="bg-white p-5 flex justify-between items-center cursor-pointer hover:bg-slate-50 transition select-none border-l-4 border-blue-500"
+            >
+              <div className="flex items-center gap-4">
+                <span className="text-lg font-extrabold text-slate-800 uppercase tracking-widest">{detalhes.nome}</span>
+                <span className="bg-slate-100 text-slate-500 text-xs font-bold px-3 py-1 rounded-full">{detalhes.topicos.length} Tópicos</span>
               </div>
+              <div className="flex items-center gap-4">
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setActiveMateriaId(detalhes.id); setTopicModalOpen(true); }}
+                  className="bg-slate-100 hover:bg-slate-200 text-blue-600 text-xs font-bold py-1.5 px-4 rounded-full transition"
+                >
+                  + Novo Tópico
+                </button>
+                <span className="text-slate-400 font-bold bg-slate-50 w-8 h-8 flex items-center justify-center rounded-full">
+                  {expanded[detalhes.id] ? '▲' : '▼'}
+                </span>
+              </div>
+            </div>
 
-              {/* Tabela de Dados Expandida com a prop onRefresh */}
-              {isExpanded && (
+            {expanded[detalhes.id] && (
+              <div className="border-t border-slate-100 p-2">
                 <TabelaPlanilha 
                   detalhes={detalhes} 
                   themeColors={themeColors} 
                   onOpenSubtopicModal={(topicoId) => { setActiveTopicId(topicoId); setSubtopicModalOpen(true); }} 
                   onToggleRevisao={(topIdx, subIdx, revNum) => toggleStatusRevisao(detalhes.id, topIdx, subIdx, revNum)} 
                   getCorTag={getCorTag} 
-                  onRefresh={carregarDados}
+                  ocultarCabecalhoMateria={true} 
                 />
-              )}
-            </div>
-          );
-        })
+              </div>
+            )}
+          </div>
+        ))
       )}
 
-      {/* Modais de Cadastro */}
+      {/* Os modais estão nos seus ficheiros. Adicione a classe 'backdrop-blur-sm' neles! */}
       <ModalMateria isOpen={isMateriaModalOpen} onClose={() => setMateriaModalOpen(false)} onSave={handleSaveMateria} />
       <ModalTopico isOpen={isTopicModalOpen} onClose={() => setTopicModalOpen(false)} onSave={handleSaveTopic} />
       <ModalSubtopico isOpen={isSubtopicModalOpen} onClose={() => setSubtopicModalOpen(false)} onSave={handleSaveSubtopic} />

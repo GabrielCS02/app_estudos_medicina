@@ -15,7 +15,7 @@ export default function ModalSubtopico({ isOpen, onClose, onSave }) {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white p-6 rounded-lg w-96 shadow-xl">
+      <div className="bg-white p-6 rounded-lg w-[90%] max-w-md shadow-xl mx-auto">
         <h3 className="text-lg font-bold mb-4">Adicionar Subtópico</h3>
         <form onSubmit={handleSubmit}>
           <div className="mb-4">

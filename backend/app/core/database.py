@@ -1,17 +1,21 @@
+import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-# Cria um arquivo de banco de dados local chamado "banco_estudos.db" na raiz do backend
-SQLALCHEMY_DATABASE_URL = "sqlite:///./banco_estudos.db"
+# Lê a URL da nuvem; se não existir, usa o SQLite local
+SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./banco_estudos.db")
 
-# connect_args={"check_same_thread": False} é exigido pelo FastAPI ao usar SQLite
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
-)
+# Ajuste de compatibilidade para o SQLAlchemy
+if SQLALCHEMY_DATABASE_URL.startswith("postgres://"):
+    SQLALCHEMY_DATABASE_URL = SQLALCHEMY_DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+if "sqlite" in SQLALCHEMY_DATABASE_URL:
+    engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
+else:
+    engine = create_engine(SQLALCHEMY_DATABASE_URL)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Função de injeção de dependência que as rotas tentaram importar
 def get_db():
     db = SessionLocal()
     try:

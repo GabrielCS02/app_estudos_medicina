@@ -1,12 +1,22 @@
 import axios from 'axios';
 
-// Instância apontando diretamente para o terminal do seu FastAPI
+// URL de produção gerada pelo Render
 const api = axios.create({
-  baseURL: 'http://localhost:8000', 
+  baseURL: 'https://app-estudos-medicina.onrender.com',
 });
 
 export const getDashboardData = async () => {
   const response = await api.get('/dashboard/visao-geral');
+  return response.data;
+};
+
+export const getCronograma = async () => {
+  const response = await api.get('/cronograma');
+  return response.data;
+};
+
+export const registrarAula = async (subtopicoId, data) => {
+  const response = await api.post(`/subtopicos/${subtopicoId}/registrar-aula`, data);
   return response.data;
 };
 

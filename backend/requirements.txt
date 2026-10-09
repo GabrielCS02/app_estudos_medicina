@@ -3,4 +3,5 @@ uvicorn
 sqlalchemy
 pydantic
 pytest
+psycopg[binary]
 psycopg2-binary

@@ -90,10 +90,10 @@ export default function PainelMaterias() {
 
   const getCorTag = (corEnum) => {
     switch (corEnum) {
-      case "Verde": return "bg-[#E5F3F1] text-[#0D8A72] border-[#D0EBE7]";
-      case "Amarelo": return "bg-amber-50 text-amber-600 border-amber-200";
-      case "Vermelho": return "bg-rose-50 text-rose-600 border-rose-200";
-      default: return "bg-slate-50 text-slate-500 border-slate-200";
+      case "Verde": return "bg-[#0D8A72] text-white border border-[#0D5C53] shadow-md";
+      case "Amarelo": return "bg-amber-500 text-white border border-amber-600 shadow-md";
+      case "Vermelho": return "bg-rose-500 text-white border border-rose-600 shadow-md";
+      default: return "bg-slate-400 text-white border border-slate-500 shadow-md";
     }
   };
 

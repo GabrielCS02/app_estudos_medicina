@@ -9,10 +9,12 @@ export default function App() {
   return (
     <div className="App min-h-screen bg-[#F0F7F7] flex flex-col font-sans text-slate-800">
       
-      {/* Menu Flutuante (Estilo Pílula) */}
-      <nav className="sticky top-2 sm:top-4 z-40 px-2 sm:px-8 pt-2 pb-4">
-        <div className="max-w-4xl mx-auto bg-white/90 backdrop-blur-md rounded-full shadow-[0_10px_40px_-10px_rgba(13,116,108,0.12)] px-3 sm:px-6 h-16 flex items-center justify-between border border-white">
+      {/* Menu Flutuante Fixado no Topo com Escudo de Gradiente */}
+      <nav className="fixed top-0 left-0 w-full z-50 px-2 sm:px-8 pt-3 sm:pt-4 pb-4 bg-gradient-to-b from-[#F0F7F7] via-[#F0F7F7]/95 to-transparent pointer-events-none">
+        
+        <div className="max-w-5xl mx-auto bg-white/95 backdrop-blur-md rounded-full shadow-[0_10px_40px_-10px_rgba(13,116,108,0.12)] px-3 sm:px-6 h-16 flex items-center justify-between border border-white pointer-events-auto">
           
+          {/* Logo / Ícone */}
           <div className="flex items-center gap-2 sm:gap-3 text-[#0D5C53] font-black text-lg sm:text-xl tracking-tight shrink-0">
             <div className="w-8 h-8 sm:w-10 sm:h-10 bg-[#E5F3F1] rounded-full flex items-center justify-center text-xl sm:text-2xl">
               👩‍⚕️
@@ -20,7 +22,7 @@ export default function App() {
             <span className="hidden sm:block">Medicina aplicada</span>
           </div>
 
-          {/* Botões de Navegação - Sem o Módulo de Revisões */}
+          {/* Botões de Navegação */}
           <div className="flex gap-1 sm:gap-3 font-semibold overflow-x-auto scrollbar-hide whitespace-nowrap pl-2 sm:pl-4">
             {[
               { id: 'dashboard', label: 'Visão Geral' },
@@ -43,8 +45,8 @@ export default function App() {
         </div>
       </nav>
 
-      {/* Área Principal Limpa */}
-      <main className="flex-grow w-full">
+      {/* Área Principal empurrada para baixo (pt-28) para não ficar sob o menu */}
+      <main className="flex-grow w-full pt-28 sm:pt-32">
         {abaAtiva === 'dashboard' && <Dashboard />}
         {abaAtiva === 'materias' && <PainelMaterias />}
         {abaAtiva === 'cronograma' && <CronogramaAvaliacoes />}

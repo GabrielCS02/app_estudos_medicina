@@ -70,28 +70,51 @@ export default function TabelaPlanilha({
         <table className="w-full text-left border-collapse min-w-[1200px]">
           <thead>
             <tr>
-              <th className="p-3 font-semibold text-slate-400 text-xs uppercase tracking-wider border-b border-slate-100 w-48">Tópico</th>
-              <th className="p-3 font-semibold text-slate-400 text-xs uppercase tracking-wider border-b border-slate-100 w-56">Subtópico</th>
-              <th className="p-3 font-semibold text-slate-400 text-xs uppercase tracking-wider border-b border-slate-100 text-center w-28">Estudo Base</th>
-              <th className="p-3 font-semibold text-slate-400 text-xs uppercase tracking-wider border-b border-slate-100 text-center w-28">Data da Aula</th>
-              <th className="p-3 font-semibold text-[#0D8A72] text-xs uppercase tracking-wider border-b border-slate-100 text-center w-28 bg-[#F0F7F7]/50 rounded-tl-xl">Rev 1 (24h)</th>
-              <th className="p-3 font-semibold text-[#0D8A72] text-xs uppercase tracking-wider border-b border-slate-100 text-center w-28 bg-[#F0F7F7]/50">Rev 2 (7d)</th>
-              <th className="p-3 font-semibold text-[#0D8A72] text-xs uppercase tracking-wider border-b border-slate-100 text-center w-28 bg-[#F0F7F7]/50 rounded-tr-xl">Rev 3 (30d)</th>
-              <th className="p-3 font-semibold text-slate-400 text-xs uppercase tracking-wider border-b border-slate-100 text-center w-24">Acertos</th>
-              <th className="p-3 font-semibold text-slate-400 text-xs uppercase tracking-wider border-b border-slate-100 text-center w-24">Aprov.</th>
-              <th className="p-3 font-semibold text-slate-400 text-xs uppercase tracking-wider border-b border-slate-100 text-center w-28">Dificuldade</th>
+              <th className="p-3 font-semibold text-slate-400 text-xs uppercase tracking-wider border-b border-slate-100 w-48">
+                Tópico
+              </th>
+              <th className="p-3 font-semibold text-slate-400 text-xs uppercase tracking-wider border-b border-slate-100 w-56">
+                Subtópico
+              </th>
+              <th className="p-3 font-semibold text-slate-400 text-xs uppercase tracking-wider border-b border-slate-100 text-center w-28">
+                Estudo Base
+              </th>
+              <th className="p-3 font-semibold text-slate-400 text-xs uppercase tracking-wider border-b border-slate-100 text-center w-28">
+                Data da Aula
+              </th>
+              <th className="p-3 font-semibold text-[#0D8A72] text-xs uppercase tracking-wider border-b border-slate-100 text-center w-28 bg-[#F0F7F7]/50 rounded-tl-xl">
+                Rev 1 (24h)
+              </th>
+              <th className="p-3 font-semibold text-[#0D8A72] text-xs uppercase tracking-wider border-b border-slate-100 text-center w-28 bg-[#F0F7F7]/50">
+                Rev 2 (7d)
+              </th>
+              <th className="p-3 font-semibold text-[#0D8A72] text-xs uppercase tracking-wider border-b border-slate-100 text-center w-28 bg-[#F0F7F7]/50 rounded-tr-xl">
+                Rev 3 (30d)
+              </th>
+              <th className="p-3 font-semibold text-slate-400 text-xs uppercase tracking-wider border-b border-slate-100 text-center w-24">
+                Acertos
+              </th>
+              <th className="p-3 font-semibold text-slate-400 text-xs uppercase tracking-wider border-b border-slate-100 text-center w-24">
+                Aprov.
+              </th>
+              <th className="p-3 font-semibold text-slate-400 text-xs uppercase tracking-wider border-b border-slate-100 text-center w-28">
+                Dificuldade
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50 text-sm">
             {detalhes.topicos.map((topico) => {
-              const rowSpan = topico.subtopicos.length > 0 ? topico.subtopicos.length : 1;
-              const bgTopico = "bg-[#F8FBFB]"; 
+              const rowSpan =
+                topico.subtopicos.length > 0 ? topico.subtopicos.length : 1;
+              const bgTopico = "bg-[#F8FBFB]";
 
               return (
                 <Fragment key={topico.id}>
                   {topico.subtopicos.length === 0 ? (
                     <tr className="border-b border-slate-50">
-                      <td className={`p-4 font-bold text-[#0D5C53] align-top ${bgTopico} rounded-l-xl`}>
+                      <td
+                        className={`p-4 font-bold text-[#0D5C53] align-top ${bgTopico} rounded-l-xl`}
+                      >
                         <div className="flex justify-between flex-col gap-3">
                           <span>{topico.nome}</span>
                           <button
@@ -102,7 +125,10 @@ export default function TabelaPlanilha({
                           </button>
                         </div>
                       </td>
-                      <td colSpan="9" className="p-4 text-slate-400 italic text-center">
+                      <td
+                        colSpan="9"
+                        className="p-4 text-slate-400 italic text-center"
+                      >
                         Nenhum subtópico registado.
                       </td>
                     </tr>
@@ -110,13 +136,21 @@ export default function TabelaPlanilha({
                     topico.subtopicos.map((sub, subIdx) => {
                       const aula = sub.aula;
                       const revs = [1, 2, 3].map((num) =>
-                        aula ? aula.revisoes.find((r) => r.numero === num) : null
+                        aula
+                          ? aula.revisoes.find((r) => r.numero === num)
+                          : null,
                       );
 
                       return (
-                        <tr key={sub.id} className="hover:bg-slate-50/50 transition-colors">
+                        <tr
+                          key={sub.id}
+                          className="hover:bg-slate-50/50 transition-colors"
+                        >
                           {subIdx === 0 && (
-                            <td className={`p-4 font-bold text-[#0D5C53] align-top ${bgTopico} rounded-l-xl`} rowSpan={rowSpan}>
+                            <td
+                              className={`p-4 font-bold text-[#0D5C53] align-top ${bgTopico} rounded-l-xl`}
+                              rowSpan={rowSpan}
+                            >
                               <div className="flex justify-between flex-col h-full gap-3">
                                 <span>{topico.nome}</span>
                                 <button
@@ -148,7 +182,9 @@ export default function TabelaPlanilha({
 
                           <td className="p-4 text-center font-medium text-slate-500 text-xs">
                             {aula ? (
-                              new Date(aula.data_aula).toLocaleDateString("pt-PT")
+                              new Date(aula.data_aula).toLocaleDateString(
+                                "pt-PT",
+                              )
                             ) : (
                               <span className="text-slate-300">-</span>
                             )}
@@ -160,11 +196,21 @@ export default function TabelaPlanilha({
                                 <span className="text-slate-300">-</span>
                               ) : (
                                 <div className="flex flex-col items-center gap-2">
-                                  <span className={`text-[10px] font-medium uppercase tracking-wider ${rev.status === "Concluída" ? "text-slate-300 line-through" : "text-slate-500"}`}>
-                                    {new Date(rev.data).toLocaleDateString("pt-PT")}
+                                  <span
+                                    className={`text-[10px] font-medium uppercase tracking-wider ${rev.status === "Concluída" ? "text-slate-300 line-through" : "text-slate-500"}`}
+                                  >
+                                    {new Date(rev.data).toLocaleDateString(
+                                      "pt-PT",
+                                    )}
                                   </span>
                                   <button
-                                    onClick={() => onToggleRevisao(topico.id, subIdx, rIdx + 1)}
+                                    onClick={() =>
+                                      onToggleRevisao(
+                                        topico.id,
+                                        subIdx,
+                                        rIdx + 1,
+                                      )
+                                    }
                                     className={`w-7 h-7 rounded-full flex items-center justify-center transition-all border ${
                                       rev.status === "Concluída"
                                         ? "bg-[#0D8A72] text-white border-[#0D8A72] shadow-md shadow-[#0D8A72]/30"
@@ -180,7 +226,15 @@ export default function TabelaPlanilha({
 
                           <td className="p-4 text-center align-middle">
                             {sub.estudo_base ? (
-                              <AcertosInput subtopicoId={sub.id} valorInicial={sub.aproveitamento ? (sub.aproveitamento / 100) * 20 : 0} onRefresh={onRefresh} />
+                              <AcertosInput
+                                subtopicoId={sub.id}
+                                valorInicial={
+                                  sub.aproveitamento
+                                    ? (sub.aproveitamento / 100) * 20
+                                    : 0
+                                }
+                                onRefresh={onRefresh}
+                              />
                             ) : (
                               <span className="text-slate-300">-</span>
                             )}
@@ -188,7 +242,9 @@ export default function TabelaPlanilha({
 
                           <td className="p-4 text-center">
                             {sub.estudo_base ? (
-                              <span className={`text-sm font-bold ${sub.aproveitamento >= 70 ? "text-[#0D8A72]" : sub.aproveitamento >= 50 ? "text-amber-500" : "text-rose-500"}`}>
+                              <span
+                                className={`text-sm font-bold ${sub.aproveitamento >= 70 ? "text-[#0D8A72]" : sub.aproveitamento >= 50 ? "text-amber-500" : "text-rose-500"}`}
+                              >
                                 {sub.aproveitamento ?? 0}%
                               </span>
                             ) : (
@@ -196,8 +252,10 @@ export default function TabelaPlanilha({
                             )}
                           </td>
 
-                          <td className="p-4 text-center">
-                            <span className={`px-3 py-1.5 rounded-full font-bold text-[10px] uppercase tracking-wider inline-block min-w-[80px] shadow-sm border ${getCorTag(sub.dificuldade_cor)}`}>
+                          <td className="p-3 text-center">
+                            <span
+                              className={`px-3 py-1 rounded-full font-bold text-sm inline-block min-w-[40px] shadow-sm transition-all ${getCorTag(sub.dificuldade_cor)}`}
+                            >
                               {sub.dificuldade_grau}
                             </span>
                           </td>

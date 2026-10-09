@@ -4,23 +4,36 @@ import { createPortal } from 'react-dom';
 export default function ModalMateria({ isOpen, onClose, onSave }) {
   const [nomeMateria, setNomeMateria] = useState('');
   const [nomeTopico, setNomeTopico] = useState('');
+  
+  // NOVO: Estado que controla o bloqueio de carregamento
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    onSave(nomeMateria, nomeTopico, false);
-    setNomeMateria('');
-    setNomeTopico('');
+    
+    // 1. Bloqueia a interface e avisa que está a processar
+    setIsSubmitting(true); 
+    
+    try {
+      // Aguarda a resposta do servidor
+      await onSave(nomeMateria, nomeTopico, false);
+      setNomeMateria('');
+      setNomeTopico('');
+    } finally {
+      // 2. Liberta a interface (ocorre automaticamente se der erro ou antes de fechar)
+      setIsSubmitting(false); 
+    }
   };
 
   const modalContent = (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center font-sans">
       
-      {/* Overlay com Desfoque */}
+      {/* Overlay com Desfoque (impede de fechar se estiver a guardar) */}
       <div 
         className="fixed inset-0 w-full h-full bg-slate-900/40 backdrop-blur-sm transition-opacity"
-        onClick={onClose}
+        onClick={!isSubmitting ? onClose : undefined}
       ></div>
 
       {/* Caixa do Pop-up */}
@@ -36,7 +49,8 @@ export default function ModalMateria({ isOpen, onClose, onSave }) {
             </label>
             <input 
               type="text" 
-              className="w-full bg-[#F8FBFB] border border-[#D0EBE7] rounded-xl p-3 text-sm font-medium text-[#0D5C53] focus:ring-2 focus:ring-[#0D8A72] focus:border-[#0D8A72] outline-none transition-all shadow-inner placeholder-slate-300" 
+              disabled={isSubmitting}
+              className="w-full bg-[#F8FBFB] border border-[#D0EBE7] rounded-xl p-3 text-sm font-medium text-[#0D5C53] focus:ring-2 focus:ring-[#0D8A72] focus:border-[#0D8A72] outline-none transition-all shadow-inner placeholder-slate-300 disabled:opacity-50 disabled:cursor-not-allowed" 
               placeholder="Ex: Cardiologia" 
               value={nomeMateria} 
               onChange={(e) => setNomeMateria(e.target.value)} 
@@ -50,7 +64,8 @@ export default function ModalMateria({ isOpen, onClose, onSave }) {
             </label>
             <input 
               type="text" 
-              className="w-full bg-[#F8FBFB] border border-[#D0EBE7] rounded-xl p-3 text-sm font-medium text-[#0D5C53] focus:ring-2 focus:ring-[#0D8A72] focus:border-[#0D8A72] outline-none transition-all shadow-inner placeholder-slate-300" 
+              disabled={isSubmitting}
+              className="w-full bg-[#F8FBFB] border border-[#D0EBE7] rounded-xl p-3 text-sm font-medium text-[#0D5C53] focus:ring-2 focus:ring-[#0D8A72] focus:border-[#0D8A72] outline-none transition-all shadow-inner placeholder-slate-300 disabled:opacity-50 disabled:cursor-not-allowed" 
               placeholder="Ex: Insuficiência Cardíaca" 
               value={nomeTopico} 
               onChange={(e) => setNomeTopico(e.target.value)} 
@@ -62,15 +77,21 @@ export default function ModalMateria({ isOpen, onClose, onSave }) {
             <button 
               type="button" 
               onClick={onClose} 
-              className="px-5 py-2.5 text-sm font-bold text-slate-500 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors"
+              disabled={isSubmitting}
+              className="px-5 py-2.5 text-sm font-bold text-slate-500 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancelar
             </button>
             <button 
               type="submit" 
-              className="px-6 py-2.5 text-sm font-bold bg-[#0D8A72] text-white rounded-full hover:bg-[#0D5C53] shadow-[0_8px_30px_rgb(13,138,114,0.2)] transition-all transform hover:-translate-y-0.5"
+              disabled={isSubmitting}
+              className={`px-6 py-2.5 text-sm font-bold text-white rounded-full transition-all transform ${
+                isSubmitting 
+                  ? 'bg-slate-400 cursor-wait shadow-none scale-100' 
+                  : 'bg-[#0D8A72] hover:bg-[#0D5C53] shadow-[0_8px_30px_rgb(13,138,114,0.2)] hover:-translate-y-0.5'
+              }`}
             >
-              Salvar Matéria
+              {isSubmitting ? 'A guardar...' : 'Salvar Matéria'}
             </button>
           </div>
         </form>
